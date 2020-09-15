@@ -103,7 +103,7 @@ void handleRoot() {
 			"<div class=\"remoter\">" \
 			"<h1>IR Daikin Server</h1>" \
 			"<form method=\"POST\" action=\"cmd\">";
-	resp += "Power: " + getSelection("power", 0, 1, daikinir.getPower(), on_off);
+	resp += "Power: " + getSelection("power", 0, 2, daikinir.getPower(), on_off);
 	resp += "Temperature: <select name=\"temp\">";
 	for (int i = DAIKIN_MIN_TEMP; i <= DAIKIN_MAX_TEMP; i++) {
 		resp += "<option ";
