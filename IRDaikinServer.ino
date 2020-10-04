@@ -30,7 +30,9 @@
 #define DEBUG_PRINTLN(x)
 #endif 
 
-IRDaikinESP daikinir(D2);  // An IR LED is controlled by GPIO pin 4 (D2)
+const uint16_t kIrLed = 4;
+IRDaikinESP daikinir(kIrLed);  // An IR LED is controlled by GPIO pin 4 (D2)
+
 
 const char* ssid = "Chanchai-fiber";
 const char* password = "50480336";
@@ -40,13 +42,15 @@ ESP8266HTTPUpdateServer httpUpdater; // Optional web interface to remotely updat
 
 setting_t fan_speeds[6] = { { "Auto", DAIKIN_FAN_AUTO },{ "Slowest", 1 },{ "Slow", 2 },{ "Medium", 3 },{ "Fast", 4 },{ "Fastest", 5 } };
 setting_t modes[5] = { { "Cool", DAIKIN_COOL }, { "Heat", DAIKIN_HEAT }, { "Fan", DAIKIN_FAN }, { "Auto", DAIKIN_AUTO }, { "Dry", DAIKIN_DRY } };
-setting_t on_off[3] = { { "On", 1 }, { "Off", 0 }, { "1HR Off", 0x012c } };
+setting_t on_off[2] = { { "On", 1 }, { "Off", 0 } };
+setting_t times[3] = { { "30 Min", 840 }, { "1 Hr", 873 }, { "3 Hr", 960 } };
 
 void saveStatus() {
 	EEPROM_data data_new;
 	data_new.temp = daikinir.getTemp();
 	data_new.fan = daikinir.getFan();
 	data_new.power = daikinir.getPower();
+
 	data_new.powerful = daikinir.getPowerful();
 	data_new.quiet = daikinir.getQuiet();
 	data_new.swingh = daikinir.getSwingHorizontal();
@@ -58,11 +62,13 @@ void saveStatus() {
 
 void restoreStatus() {
 	EEPROM_data data_stored;
+
 	EEPROM.get(0, data_stored);
 	if (data_stored.power != NULL) {
 		daikinir.setTemp(data_stored.temp);
 		daikinir.setFan(data_stored.fan);
 		daikinir.setPower(data_stored.power);
+
 		daikinir.setPowerful(data_stored.powerful);
 		daikinir.setQuiet(data_stored.quiet);
 		daikinir.setSwingHorizontal(data_stored.swingh);
@@ -73,6 +79,7 @@ void restoreStatus() {
 		daikinir.setTemp(25);
 		daikinir.setFan(2);
 		daikinir.setPower(0);
+		daikinir.enableOffTimer(840);
 		daikinir.setPowerful(0);
 		daikinir.setQuiet(0);
 		daikinir.setSwingHorizontal(0);
@@ -104,6 +111,7 @@ void handleRoot() {
 			"<h1>IR Daikin Server</h1>" \
 			"<form method=\"POST\" action=\"cmd\">";
 	resp += "Power: " + getSelection("power", 0, 2, daikinir.getPower(), on_off);
+	resp += "Time: " + getSelection("time", 0, 2, 840 , times);
 	resp += "Temperature: <select name=\"temp\">";
 	for (int i = DAIKIN_MIN_TEMP; i <= DAIKIN_MAX_TEMP; i++) {
 		resp += "<option ";
@@ -131,7 +139,12 @@ void handleCmd() {
 	for (uint8_t i = 0; i < server.args(); i++) {
 		argName = server.argName(i);
 		arg = strtoul(server.arg(i).c_str(), NULL, 10);
+		// ตั้งค่า เวลา 1:33PM (13:33)
+  		daikinir.setCurrentTime(13 * 60 + 33);
+		 // ตั้ง ปิด 1 hour later at 2:30PM (14:30)
+  		
 		if (argName == "temp") { daikinir.setTemp(arg); } 
+		else if (argName == "time") { daikinir.enableOffTimer(arg); }
 		else if (argName == "fan") { daikinir.setFan(arg); }
 		else if (argName == "power") { daikinir.setPower(arg); }
 		else if (argName == "powerful") { daikinir.setPowerful(arg); }
